@@ -255,7 +255,6 @@ if __name__ == "__main__":
                         help='Path to the images to detect field on')
     parser.add_argument('-p', '--prediction', required=True, type=str,
                         help="Path to the prediction folder")
-    parser.add_argument('--split', required=False, type=str, default="challenge", help='Select the split of data')
     parser.add_argument('--masks', required=False, type=bool, default=False, help='Save masks in prediction directory')
     parser.add_argument('--resolution_width', required=False, type=int, default=640,
                         help='width resolution of the images')
@@ -281,7 +280,7 @@ if __name__ == "__main__":
 
     with tqdm(enumerate(frame_path_list), total=len(frame_path_list), ncols=160) as t:
         for i, frame_path in t:
-            output_prediction_folder = os.path.join(args.prediction, args.split)
+            output_prediction_folder = os.path.join(args.prediction)
             prediction = dict()
             count = 0
 
