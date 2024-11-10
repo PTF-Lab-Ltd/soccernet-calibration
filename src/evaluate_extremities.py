@@ -16,7 +16,8 @@ def distance(point1, point2):
     :param point2
     :return: euclidian distance between point1 and point2
     """
-    diff = np.array([point1['x'], point1['y']]) - np.array([point2['x'], point2['y']])
+    diff = np.array([point1['x'], point1['y']]) - \
+        np.array([point2['x'], point2['y']])
     sq_dist = np.square(diff)
     return np.sqrt(sq_dist.sum())
 
@@ -64,13 +65,15 @@ def evaluate_detection_prediction(detected_lines, groundtruth_lines, threshold=2
     for false_positive_class in false_positives_classes:
         false_positives = len(detected_lines[false_positive_class])
         confusion_mat[0, 1] += false_positives
-        per_class_confusion[false_positive_class] = np.array([[0., false_positives], [0., 0.]])
+        per_class_confusion[false_positive_class] = np.array(
+            [[0., false_positives], [0., 0.]])
 
     false_negatives_classes = groundtruth_classes - detected_classes
     for false_negatives_class in false_negatives_classes:
         false_negatives = len(groundtruth_lines[false_negatives_class])
         confusion_mat[1, 0] += false_negatives
-        per_class_confusion[false_negatives_class] = np.array([[0., 0.], [false_negatives, 0.]])
+        per_class_confusion[false_negatives_class] = np.array(
+            [[0., 0.], [false_negatives, 0.]])
 
     common_classes = detected_classes - false_positives_classes
 
@@ -80,15 +83,18 @@ def evaluate_detection_prediction(detected_lines, groundtruth_lines, threshold=2
 
         groundtruth_points = groundtruth_lines[detected_class]
 
-        groundtruth_extremities = [groundtruth_points[0], groundtruth_points[-1]]
+        groundtruth_extremities = [
+            groundtruth_points[0], groundtruth_points[-1]]
         predicted_extremities = [detected_points[0], detected_points[-1]]
         per_class_confusion[detected_class] = np.zeros((2, 2))
 
         dist1 = distance(groundtruth_extremities[0], predicted_extremities[0])
-        dist1rev = distance(groundtruth_extremities[1], predicted_extremities[0])
+        dist1rev = distance(
+            groundtruth_extremities[1], predicted_extremities[0])
 
         dist2 = distance(groundtruth_extremities[1], predicted_extremities[1])
-        dist2rev = distance(groundtruth_extremities[0], predicted_extremities[1])
+        dist2rev = distance(
+            groundtruth_extremities[0], predicted_extremities[1])
         if dist1rev <= dist1 and dist2rev <= dist2:
             # reverse order
             dist1 = dist1rev
@@ -128,7 +134,8 @@ def scale_points(points_dict, s_width, s_height):
     for line_class, points in points_dict.items():
         scaled_points = []
         for point in points:
-            new_point = {'x': point['x'] * (s_width-1), 'y': point['y'] * (s_height-1)}
+            new_point = {'x': point['x'] *
+                         (s_width-1), 'y': point['y'] * (s_height-1)}
             scaled_points.append(new_point)
         if len(scaled_points):
             line_dict[line_class] = scaled_points
@@ -139,14 +146,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test')
 
-    parser.add_argument('-s', '--soccernet', default="./annotations", type=str,
+    parser.add_argument('-i', '--images', type=str, required=True,
                         help='Path to the SoccerNet-V3 dataset folder')
-    parser.add_argument('-p', '--prediction', default="./results_bis",
-                        required=False, type=str,
+    parser.add_argument('-p', '--prediction',
+                        required=True, type=str,
                         help="Path to the prediction folder")
     parser.add_argument('-t', '--threshold', default=10, required=False, type=int,
                         help="Accuracy threshold in pixels")
-    parser.add_argument('--split', required=False, type=str, default="test", help='Select the split of data')
     parser.add_argument('--resolution_width', required=False, type=int, default=960,
                         help='width resolution of the images')
     parser.add_argument('--resolution_height', required=False, type=int, default=540,
@@ -156,21 +162,29 @@ if __name__ == "__main__":
     accuracies = []
     precisions = []
     recalls = []
+    errors = []
+    confusions = []
+    per_class_confs = []
     dict_errors = {}
     per_class_confusion_dict = {}
 
-    dataset_dir = os.path.join(args.soccernet, args.split)
-    if not os.path.exists(dataset_dir):
-        print("Invalid dataset path !")
+    images_dir = args.images
+    if not os.path.exists(images_dir):
+        print("Invalid images directory path !")
         exit(-1)
 
-    annotation_files = [f for f in os.listdir(dataset_dir) if ".json" in f]
+    annotation_files = [f for f in sorted(
+        os.listdir(images_dir)) if ".json" in f]
+
+    frame_indices = []
 
     with tqdm(enumerate(annotation_files), total=len(annotation_files), ncols=160) as t:
         for i, annotation_file in t:
             frame_index = annotation_file.split(".")[0]
-            annotation_file = os.path.join(args.soccernet, args.split, annotation_file)
-            prediction_file = os.path.join(args.prediction, args.split, f"extremities_{frame_index}.json")
+            annotation_file = os.path.join(
+                args.images, annotation_file)
+            prediction_file = os.path.join(
+                args.prediction, f"{frame_index}.json")
 
             if not os.path.exists(prediction_file):
                 accuracies.append(0.)
@@ -178,14 +192,17 @@ if __name__ == "__main__":
                 recalls.append(0.)
                 continue
 
+            frame_indices.append(frame_index)
             with open(annotation_file, 'r') as f:
                 line_annotations = json.load(f)
 
             with open(prediction_file, 'r') as f:
                 predictions = json.load(f)
 
-            predictions = scale_points(predictions, args.resolution_width, args.resolution_height)
-            line_annotations = scale_points(line_annotations, args.resolution_width, args.resolution_height)
+            predictions = scale_points(
+                predictions, args.resolution_width, args.resolution_height)
+            line_annotations = scale_points(
+                line_annotations, args.resolution_width, args.resolution_height)
 
             img_prediction = predictions
             img_groundtruth = line_annotations
@@ -215,6 +232,9 @@ if __name__ == "__main__":
                 per_class_conf = per_class_conf2
                 reproj_errors = reproj_errors2
 
+            confusions.append(confusion)
+            per_class_confs.append(per_class_conf)
+
             accuracies.append(accuracy)
             if confusion[0, :].sum() > 0:
                 precision = confusion[0, 0] / (confusion[0, :].sum())
@@ -223,11 +243,13 @@ if __name__ == "__main__":
                 recall = confusion[0, 0] / (confusion[0, 0] + confusion[1, 0])
                 recalls.append(recall)
 
-            for line_class, errors in reproj_errors.items():
+            for line_class, errors_ in reproj_errors.items():
+                e = np.sqrt(np.sum(np.square(errors_)))
                 if line_class in dict_errors.keys():
-                    dict_errors[line_class].extend(errors)
+                    dict_errors[line_class].append(e)
                 else:
-                    dict_errors[line_class] = errors
+                    dict_errors[line_class] = [e]
+            errors.append(reproj_errors)
 
             for line_class, confusion_mat in per_class_conf.items():
                 if line_class in per_class_confusion_dict.keys():
@@ -239,32 +261,69 @@ if __name__ == "__main__":
     sRecall = np.std(recalls)
     medianRecall = np.median(recalls)
     print(
-        f" On SoccerNet {args.split} set, recall mean value : {mRecall * 100:2.2f}% with standard deviation of {sRecall * 100:2.2f}% and median of {medianRecall * 100:2.2f}%")
+        f" On SoccerNet  set, recall mean value : {mRecall * 100:2.2f}% with standard deviation of {sRecall * 100:2.2f}% and median of {medianRecall * 100:2.2f}%")
 
     mPrecision = np.mean(precisions)
     sPrecision = np.std(precisions)
     medianPrecision = np.median(precisions)
     print(
-        f" On SoccerNet {args.split} set, precision mean value : {mPrecision * 100:2.2f}% with standard deviation of {sPrecision * 100:2.2f}% and median of {medianPrecision * 100:2.2f}%")
+        f" On SoccerNet set, precision mean value : {mPrecision * 100:2.2f}% with standard deviation of {sPrecision * 100:2.2f}% and median of {medianPrecision * 100:2.2f}%")
 
     mAccuracy = np.mean(accuracies)
     sAccuracy = np.std(accuracies)
     medianAccuracy = np.median(accuracies)
     print(
-        f" On SoccerNet {args.split} set, accuracy mean value : {mAccuracy * 100:2.2f}% with standard deviation of {sAccuracy * 100:2.2f}% and median of {medianAccuracy * 100:2.2f}%")
+        f" On SoccerNet set, accuracy mean value : {mAccuracy * 100:2.2f}% with standard deviation of {sAccuracy * 100:2.2f}% and median of {medianAccuracy * 100:2.2f}%")
+
+    results = {
+        "threshold": str(args.threshold),
+        #  "dataset_errors": {
+        # "mean_recall": str(mRecall),
+        # "std_recall": str(sRecall),
+        # "median_recall": str(medianRecall),
+        # "mean_precision": str(mPrecision),
+        # "std_precision": str(sPrecision),
+        # "median_precision": str(medianPrecision),
+        "mean_accuracy": str(mAccuracy),
+        "std_accuracy": str(sAccuracy),
+        "median_accuracy": str(medianAccuracy)
+    }
+
+    # print(dict_errors)
 
     for line_class, confusion_mat in per_class_confusion_dict.items():
         class_accuracy = confusion_mat[0, 0] / confusion_mat.sum()
-        class_recall = confusion_mat[0, 0] / (confusion_mat[0, 0] + confusion_mat[1, 0])
-        class_precision = confusion_mat[0, 0] / (confusion_mat[0, 0] + confusion_mat[0, 1])
+        class_recall = confusion_mat[0, 0] / \
+            (confusion_mat[0, 0] + confusion_mat[1, 0])
+        class_precision = confusion_mat[0, 0] / \
+            (confusion_mat[0, 0] + confusion_mat[0, 1])
         print(
             f"For class {line_class}, accuracy of {class_accuracy * 100:2.2f}%, precision of {class_precision * 100:2.2f}%  and recall of {class_recall * 100:2.2f}%")
+        results[line_class] = {}
+        results[line_class]["accuracy"] = str(class_accuracy)
+        if line_class != "Line unknown":
+            results[line_class]["mean_reproj_error"] = np.mean(
+                dict_errors[line_class])
 
-    for k, v in dict_errors.items():
-        fig, ax1 = plt.subplots(figsize=(11, 8))
-        ax1.hist(v, bins=30, range=(0, 60))
-        ax1.set_title(k)
-        ax1.set_xlabel("Errors in pixel")
-        os.makedirs(f"./results/", exist_ok=True)
-        plt.savefig(f"./results/{k}_detection_error.png")
-        plt.close(fig)
+    results["file_errors"] = {}
+
+    # for k, v in dict_errors.items():
+    #     fig, ax1 = plt.subplots(figsize=(11, 8))
+    #     ax1.hist(v, bins=30, range=(0, 60))
+    #     ax1.set_title(k)
+    #     ax1.set_xlabel("Errors in pixel")
+    #     os.makedirs(os.path.join(args.prediction, "errors"), exist_ok=True)
+    #     plt.savefig(os.path.join(args.prediction,
+    #                 "errors", f"{k}_detection_error.png"))
+    #     plt.close(fig)
+
+    # print(errors)
+    for i, frame_index in enumerate(frame_indices):
+        results["file_errors"][frame_index] = {
+            "accuracy": str(accuracies[i]),
+            "mean_reproj_error": str(np.sqrt(np.sum(np.square(list(errors[i].values()))))),
+            "reprojection_errors": {k: str(np.sqrt(np.sum(np.square(v)))) for k, v in errors[i].items()}
+        }
+
+        with open(os.path.join(args.prediction, "errors", "evaluation_results.json"), 'w') as f:
+            json.dump(results, f, indent=4)
