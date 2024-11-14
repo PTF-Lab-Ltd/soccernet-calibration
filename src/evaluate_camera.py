@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from camera import Camera
-from evaluate_extremities import scale_points, distance, mirror_labels
-from soccerpitch import SoccerPitch
+from src.camera import Camera
+from src.evaluate_extremities import scale_points, distance, mirror_labels
+from src.soccerpitch import SoccerPitch
 
 
 def get_polylines(camera_annotation, width, height, sampling_factor=0.2):
@@ -55,9 +55,11 @@ def get_polylines(camera_annotation, width, height, sampling_factor=0.2):
                         intersection /= intersection[2]
                         if 0 <= intersection[0] < width and 0 <= intersection[1] < height:
                             in_img_intersections.append(intersection)
-                            dist_to_ext.append(np.sqrt(np.sum(np.square(intersection - ext))))
+                            dist_to_ext.append(
+                                np.sqrt(np.sum(np.square(intersection - ext))))
                     if in_img_intersections:
-                        intersection = in_img_intersections[np.argmin(dist_to_ext)]
+                        intersection = in_img_intersections[np.argmin(
+                            dist_to_ext)]
 
                         projections_list.append(
                             {
@@ -84,7 +86,8 @@ def get_polylines(camera_annotation, width, height, sampling_factor=0.2):
                     intersection /= intersection[2]
                     if 0 <= intersection[0] < width and 0 <= intersection[1] < height:
                         in_img_intersections.append(intersection)
-                        dist_to_ext.append(np.sqrt(np.sum(np.square(intersection - ext))))
+                        dist_to_ext.append(
+                            np.sqrt(np.sum(np.square(intersection - ext))))
                 if in_img_intersections:
                     intersection = in_img_intersections[np.argmin(dist_to_ext)]
 
@@ -130,7 +133,8 @@ def distance_to_polyline(point, polyline):
             line /= np.sqrt(np.square(line[0]) + np.square(line[1]))
 
             # project point on line l
-            projected = np.cross((np.cross(np.array([line[0], line[1], 0]), point_np)), line)
+            projected = np.cross(
+                (np.cross(np.array([line[0], line[1], 0]), point_np)), line)
             projected = projected / projected[2]
 
             v1 = projected - origin_segment
@@ -138,7 +142,8 @@ def distance_to_polyline(point, polyline):
             k = np.dot(v1, v2) / np.dot(v2, v2)
             if 0 < k < 1:
 
-                segment_distance = np.sqrt(np.sum(np.square(projected - point_np)))
+                segment_distance = np.sqrt(
+                    np.sum(np.square(projected - point_np)))
             else:
                 d1 = distance(point, polyline[i])
                 d2 = distance(point, polyline[i + 1])
@@ -174,13 +179,15 @@ def evaluate_camera_prediction(projected_lines, groundtruth_lines, threshold):
             false_positives = 2.
         else:
             false_positives = 9.
-        per_class_confusion[false_positive_class] = np.array([[0., false_positives], [0., 0.]])
+        per_class_confusion[false_positive_class] = np.array(
+            [[0., false_positives], [0., 0.]])
         global_confusion_mat[0, 1] += 1
 
     false_negatives_classes = groundtruth_classes - detected_classes
     for false_negatives_class in false_negatives_classes:
         false_negatives = len(groundtruth_lines[false_negatives_class])
-        per_class_confusion[false_negatives_class] = np.array([[0., 0.], [false_negatives, 0.]])
+        per_class_confusion[false_negatives_class] = np.array(
+            [[0., 0.], [false_negatives, 0.]])
         global_confusion_mat[1, 0] += 1
 
     common_classes = detected_classes - false_positives_classes
@@ -217,7 +224,8 @@ def evaluate_camera_prediction(projected_lines, groundtruth_lines, threshold):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Evaluation camera calibration task')
+    parser = argparse.ArgumentParser(
+        description='Evaluation camera calibration task')
 
     parser.add_argument('-s', '--soccernet', default="/home/fmg/data/SN23/calibration-2023-bis/", type=str,
                         help='Path to the SoccerNet-V3 dataset folder')
@@ -226,7 +234,8 @@ if __name__ == "__main__":
                         help="Path to the prediction folder")
     parser.add_argument('-t', '--threshold', default=5, required=False, type=int,
                         help="Accuracy threshold in pixels")
-    parser.add_argument('--split', required=False, type=str, default="valid", help='Select the split of data')
+    parser.add_argument('--split', required=False, type=str,
+                        default="valid", help='Select the split of data')
     parser.add_argument('--resolution_width', required=False, type=int, default=960,
                         help='width resolution of the images')
     parser.add_argument('--resolution_height', required=False, type=int, default=540,
@@ -250,8 +259,10 @@ if __name__ == "__main__":
     with tqdm(enumerate(annotation_files), total=len(annotation_files), ncols=160) as t:
         for i, annotation_file in t:
             frame_index = annotation_file.split(".")[0]
-            annotation_file = os.path.join(args.soccernet, args.split, annotation_file)
-            prediction_file = os.path.join(args.prediction, args.split, f"camera_{frame_index}.json")
+            annotation_file = os.path.join(
+                args.soccernet, args.split, annotation_file)
+            prediction_file = os.path.join(
+                args.prediction, args.split, f"camera_{frame_index}.json")
 
             total_frames += 1
 
@@ -266,9 +277,11 @@ if __name__ == "__main__":
             with open(prediction_file, 'r') as f:
                 predictions = json.load(f)
 
-            line_annotations = scale_points(line_annotations, args.resolution_width, args.resolution_height)
+            line_annotations = scale_points(
+                line_annotations, args.resolution_width, args.resolution_height)
 
-            image_path = os.path.join(args.soccernet, args.split, f"{frame_index}.jpg")
+            image_path = os.path.join(
+                args.soccernet, args.split, f"{frame_index}.jpg")
 
             img_groundtruth = line_annotations
 
@@ -280,7 +293,8 @@ if __name__ == "__main__":
                                                                                      args.threshold)
 
             confusion2, per_class_conf2, reproj_errors2 = evaluate_camera_prediction(img_prediction,
-                                                                                     mirror_labels(img_groundtruth),
+                                                                                     mirror_labels(
+                                                                                         img_groundtruth),
                                                                                      args.threshold)
 
             accuracy1, accuracy2 = 0., 0.
@@ -326,7 +340,8 @@ if __name__ == "__main__":
 
     final_score = completeness_score * mAccuracy
     print(f" On SoccerNet {args.split} set, final score of : {final_score}")
-    print(f" On SoccerNet {args.split} set, completeness rate of : {completeness_score}")
+    print(f" On SoccerNet {args.split} set, completeness rate of : {
+          completeness_score}")
 
     mRecall = np.mean(recalls)
     sRecall = np.std(recalls)
@@ -349,8 +364,10 @@ if __name__ == "__main__":
 
     for line_class, confusion_mat in per_class_confusion_dict.items():
         class_accuracy = confusion_mat[0, 0] / confusion_mat.sum()
-        class_recall = confusion_mat[0, 0] / (confusion_mat[0, 0] + confusion_mat[1, 0])
-        class_precision = confusion_mat[0, 0] / (confusion_mat[0, 0] + confusion_mat[0, 1])
+        class_recall = confusion_mat[0, 0] / \
+            (confusion_mat[0, 0] + confusion_mat[1, 0])
+        class_precision = confusion_mat[0, 0] / \
+            (confusion_mat[0, 0] + confusion_mat[0, 1])
         print(
             f"For class {line_class}, accuracy of {class_accuracy * 100:2.2f}%, precision of {class_precision * 100:2.2f}%  and recall of {class_recall * 100:2.2f}%")
 
