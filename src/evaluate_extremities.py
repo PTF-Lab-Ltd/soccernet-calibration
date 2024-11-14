@@ -6,20 +6,130 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from soccerpitch import SoccerPitch
+from src.soccerpitch import SoccerPitch
 
 
-def distance(point1, point2):
+class Line2D:
+    def __init__(self, point1, point2):
+        """Initialize a line from two points.
+
+        Args:
+            point1 (tuple/list): First point (x1, y1)
+            point2 (tuple/list): Second point (x2, y2)
+        """
+        self.p1 = np.array(point1)
+        self.p2 = np.array(point2)
+
+        # Calculate line coefficients (ax + by + c = 0)
+        self.direction = self.p2 - self.p1
+        self.a = -self.direction[1]
+        self.b = self.direction[0]
+        self.c = np.cross(self.p1, self.p2)
+
+        # Normalize coefficients
+        norm = np.sqrt(self.a**2 + self.b**2)
+        self.a /= norm
+        self.b /= norm
+        self.c /= norm
+
+    def point_distance(self, point):
+        """Calculate perpendicular distance from a point to the line.
+
+        Args:
+            point (tuple/list): Point coordinates (x, y)
+
+        Returns:
+            float: Perpendicular distance from point to line
+        """
+        return abs(self.a * point[0] + self.b * point[1] + self.c)
+
+
+class LineSegment2D:
+    def __init__(self, start_point, end_point):
+        """Initialize a line segment from start and end points.
+
+        Args:
+            start_point (tuple/list): Start point coordinates (x1, y1)
+            end_point (tuple/list): End point coordinates (x2, y2)
+        """
+        self.start = np.array(start_point)
+        self.end = np.array(end_point)
+        self.length = np.linalg.norm(self.end - self.start)
+
+    def sample_points(self, num_points=100):
+        """Generate evenly spaced points along the line segment.
+
+        Args:
+            num_points (int): Number of points to generate
+
+        Returns:
+            numpy.ndarray: Array of points along the line segment
+        """
+        t = np.linspace(0, 1, num_points)
+        points = np.outer(1-t, self.start) + np.outer(t, self.end)
+        return points
+
+    def get_endpoints(self):
+        """Return the endpoints of the line segment.
+
+        Returns:
+            tuple: (start_point, end_point)
+        """
+        return self.start, self.end
+
+
+def calculate_segment_to_line_error(segment, line, num_samples=100):
+    """Calculate reprojection error between a line segment and an infinite line.
+
+    Args:
+        segment (LineSegment2D): Line segment
+        line (Line2D): Infinite line
+        num_samples (int): Number of sample points to use
+
+    Returns:
+        dict: Dictionary containing various error metrics
+    """
+    # Sample points along the segment
+    points = segment.sample_points(num_samples)
+
+    # Calculate distances from each point to the line
+    distances = np.array([line.point_distance(point) for point in points])
+
+    # Calculate error metrics
+    rms_error = np.sqrt(np.mean(distances**2))
+    max_error = np.max(distances)
+    mean_error = np.mean(distances)
+
+    # Calculate endpoint errors
+    start_point, end_point = segment.get_endpoints()
+    start_error = line.point_distance(start_point)
+    end_error = line.point_distance(end_point)
+
+    return {
+        'rms_error': rms_error,
+        'max_error': max_error,
+        'mean_error': mean_error,
+        'start_point_error': start_error,
+        'end_point_error': end_error
+    }
+
+
+def distance(line1, line2):
     """
     Computes euclidian distance between 2D points
     :param point1
     :param point2
     :return: euclidian distance between point1 and point2
     """
-    diff = np.array([point1['x'], point1['y']]) - \
-        np.array([point2['x'], point2['y']])
-    sq_dist = np.square(diff)
-    return np.sqrt(sq_dist.sum())
+
+    # Create two similar but not identical lines
+
+    segment = LineSegment2D([float(line2[0]["x"]), float(line2[0]["y"])], [
+        float(line2[1]["x"]), float(line2[1]["y"])])
+    line = Line2D([float(line1[0]["x"]), float(line1[0]["y"])], [
+        float(line1[1]["x"]), float(line1[1]["y"])])
+    errors = calculate_segment_to_line_error(segment, line)
+    return errors['mean_error']
 
 
 def mirror_labels(lines_dict):
@@ -88,32 +198,13 @@ def evaluate_detection_prediction(detected_lines, groundtruth_lines, threshold=2
         predicted_extremities = [detected_points[0], detected_points[-1]]
         per_class_confusion[detected_class] = np.zeros((2, 2))
 
-        dist1 = distance(groundtruth_extremities[0], predicted_extremities[0])
-        dist1rev = distance(
-            groundtruth_extremities[1], predicted_extremities[0])
+        dist = distance(groundtruth_extremities, predicted_extremities)
 
-        dist2 = distance(groundtruth_extremities[1], predicted_extremities[1])
-        dist2rev = distance(
-            groundtruth_extremities[0], predicted_extremities[1])
-        if dist1rev <= dist1 and dist2rev <= dist2:
-            # reverse order
-            dist1 = dist1rev
-            dist2 = dist2rev
+        errors_dict[detected_class] = dist
 
-        errors_dict[detected_class] = [dist1, dist2]
-
-        if dist1 < threshold:
+        if dist < threshold:
             confusion_mat[0, 0] += 1
             per_class_confusion[detected_class][0, 0] += 1
-        else:
-            # treat too far detections as false positives
-            confusion_mat[0, 1] += 1
-            per_class_confusion[detected_class][0, 1] += 1
-
-        if dist2 < threshold:
-            confusion_mat[0, 0] += 1
-            per_class_confusion[detected_class][0, 0] += 1
-
         else:
             # treat too far detections as false positives
             confusion_mat[0, 1] += 1
@@ -199,10 +290,10 @@ if __name__ == "__main__":
             with open(prediction_file, 'r') as f:
                 predictions = json.load(f)
 
-            predictions = scale_points(
-                predictions, args.resolution_width, args.resolution_height)
-            line_annotations = scale_points(
-                line_annotations, args.resolution_width, args.resolution_height)
+            # predictions = scale_points(
+            #    predictions, args.resolution_width, args.resolution_height)
+            # line_annotations = scale_points(
+            #    line_annotations, args.resolution_width, args.resolution_height)
 
             img_prediction = predictions
             img_groundtruth = line_annotations
@@ -243,12 +334,11 @@ if __name__ == "__main__":
                 recall = confusion[0, 0] / (confusion[0, 0] + confusion[1, 0])
                 recalls.append(recall)
 
-            for line_class, errors_ in reproj_errors.items():
-                e = np.sqrt(np.sum(np.square(errors_)))
+            for line_class, error in reproj_errors.items():
                 if line_class in dict_errors.keys():
-                    dict_errors[line_class].append(e)
+                    dict_errors[line_class].append(error)
                 else:
-                    dict_errors[line_class] = [e]
+                    dict_errors[line_class] = [error]
             errors.append(reproj_errors)
 
             for line_class, confusion_mat in per_class_conf.items():
@@ -278,15 +368,15 @@ if __name__ == "__main__":
     results = {
         "threshold": str(args.threshold),
         #  "dataset_errors": {
-        # "mean_recall": str(mRecall),
-        # "std_recall": str(sRecall),
-        # "median_recall": str(medianRecall),
+        "mean_recall": str(mRecall),
+        "std_recall": str(sRecall),
+        "median_recall": str(medianRecall),
         # "mean_precision": str(mPrecision),
         # "std_precision": str(sPrecision),
         # "median_precision": str(medianPrecision),
-        "mean_accuracy": str(mAccuracy),
-        "std_accuracy": str(sAccuracy),
-        "median_accuracy": str(medianAccuracy)
+        # "mean_accuracy": str(mAccuracy),
+        # "std_accuracy": str(sAccuracy),
+        # "median_accuracy": str(medianAccuracy)
     }
 
     # print(dict_errors)
@@ -300,7 +390,7 @@ if __name__ == "__main__":
         print(
             f"For class {line_class}, accuracy of {class_accuracy * 100:2.2f}%, precision of {class_precision * 100:2.2f}%  and recall of {class_recall * 100:2.2f}%")
         results[line_class] = {}
-        results[line_class]["accuracy"] = str(class_accuracy)
+        results[line_class]["recall"] = str(class_recall)
         if line_class != "Line unknown":
             results[line_class]["mean_reproj_error"] = np.mean(
                 dict_errors[line_class])
@@ -320,9 +410,9 @@ if __name__ == "__main__":
     # print(errors)
     for i, frame_index in enumerate(frame_indices):
         results["file_errors"][frame_index] = {
-            "accuracy": str(accuracies[i]),
-            "mean_reproj_error": str(np.sqrt(np.sum(np.square(list(errors[i].values()))))),
-            "reprojection_errors": {k: str(np.sqrt(np.sum(np.square(v)))) for k, v in errors[i].items()}
+            "recall": str(accuracies[i]),
+            "mean_reproj_error": str(np.mean(list(errors[i].values()))),
+            "reprojection_errors": errors[i]
         }
 
         with open(os.path.join(args.prediction, "errors", "evaluation_results.json"), 'w') as f:

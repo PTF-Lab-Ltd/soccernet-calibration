@@ -12,7 +12,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from soccerpitch import SoccerPitch
+from src.soccerpitch import SoccerPitch
 
 
 class SoccerNetDataset(Dataset):
@@ -59,7 +59,8 @@ class SoccerNetDataset(Dataset):
         item = self.data[index]
 
         img = cv.imread(item["image_path"])
-        img = cv.resize(img, (self.width, self.height), interpolation=cv.INTER_LINEAR)
+        img = cv.resize(img, (self.width, self.height),
+                        interpolation=cv.INTER_LINEAR)
 
         mask = np.zeros(img.shape[:-1], dtype=np.uint8)
         img = np.asarray(img, np.float32) / 255.
@@ -74,8 +75,10 @@ class SoccerNetDataset(Dataset):
                 for i in range(1, len(line)):
                     next_point = line[i]
                     cv.line(mask,
-                            (int(prev_point["x"] * mask.shape[1]), int(prev_point["y"] * mask.shape[0])),
-                            (int(next_point["x"] * mask.shape[1]), int(next_point["y"] * mask.shape[0])),
+                            (int(prev_point["x"] * mask.shape[1]),
+                             int(prev_point["y"] * mask.shape[0])),
+                            (int(next_point["x"] * mask.shape[1]),
+                             int(next_point["y"] * mask.shape[0])),
                             class_number + 1,
                             2)
                     prev_point = next_point
@@ -89,8 +92,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--SoccerNet_path', default="./annotations/", type=str,
                         help='Path to the SoccerNet-V3 dataset folder')
-    parser.add_argument('--tiny', required=False, type=int, default=None, help='Select a subset of x games')
-    parser.add_argument('--split', required=False, type=str, default="test", help='Select the split of data')
+    parser.add_argument('--tiny', required=False, type=int,
+                        default=None, help='Select a subset of x games')
+    parser.add_argument('--split', required=False, type=str,
+                        default="test", help='Select the split of data')
     parser.add_argument('--num_workers', required=False, type=int, default=4,
                         help='number of workers for the dataloader')
     parser.add_argument('--resolution_width', required=False, type=int, default=1920,
@@ -99,7 +104,8 @@ if __name__ == "__main__":
                         help='height resolution of the images')
     parser.add_argument('--preload_images', action='store_true',
                         help="Preload the images when constructing the dataset")
-    parser.add_argument('--zipped_images', action='store_true', help="Read images from zipped folder")
+    parser.add_argument('--zipped_images', action='store_true',
+                        help="Read images from zipped folder")
 
     args = parser.parse_args()
 
