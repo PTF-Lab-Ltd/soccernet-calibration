@@ -113,8 +113,10 @@ def get_line_extremities(buckets, maxdist, width, height):
                 max_len = len(polyline)
                 longest_polyline = polyline
         extremities[class_name] = [
-            {'x': longest_polyline[0][1] / width, 'y': longest_polyline[0][0] / height},
-            {'x': longest_polyline[-1][1] / width, 'y': longest_polyline[-1][0] / height}
+            {'x': longest_polyline[0][1] / width,
+                'y': longest_polyline[0][0] / height},
+            {'x': longest_polyline[-1][1] / width,
+                'y': longest_polyline[-1][0] / height}
         ]
     return extremities
 
@@ -183,10 +185,12 @@ def synthesize_mask(semantic_mask, disk_radius):
         dist = 10.
         success = True
         while dist > 1.:
-            enough_support, center = get_support_center(mask, start, disk_radius)
+            enough_support, center = get_support_center(
+                mask, start, disk_radius)
             if not enough_support:
                 bad_point = np.round(center).astype(np.int32)
-                cv.circle(mask, (bad_point[1], bad_point[0]), disk_radius, (0), -1)
+                cv.circle(
+                    mask, (bad_point[1], bad_point[0]), disk_radius, (0), -1)
                 success = False
             dist = np.sqrt(np.sum(np.square(center - start)))
             start = center
@@ -201,11 +205,13 @@ def synthesize_mask(semantic_mask, disk_radius):
 class SegmentationNetwork:
     def __init__(self, model_file, mean_file, std_file, num_classes=29, width=640, height=360):
         file_path = Path(model_file).resolve()
-        model = nn.DataParallel(deeplabv3_resnet50(pretrained=False, num_classes=num_classes))
+        model = nn.DataParallel(deeplabv3_resnet50(
+            pretrained=False, num_classes=num_classes))
         self.init_weight(model, nn.init.kaiming_normal_,
                          nn.BatchNorm2d, 1e-3, 0.1,
                          mode='fan_in')
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
         checkpoint = torch.load(str(file_path), map_location=self.device)
         model.load_state_dict(checkpoint["model"])
         model.eval()
@@ -234,7 +240,8 @@ class SegmentationNetwork:
         :param image: BGR image
         :return: predicted classes mask
         """
-        img = cv.resize(image, (self.width, self.height), interpolation=cv.INTER_LINEAR)
+        img = cv.resize(image, (self.width, self.height),
+                        interpolation=cv.INTER_LINEAR)
         img = np.asarray(img, np.float32) / 255.
         img = (img - self.mean) / self.std
         img = img.transpose((2, 0, 1))
@@ -251,12 +258,12 @@ class SegmentationNetwork:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test')
 
-    parser.add_argument('-s', '--soccernet', default="/home/fmg/data/SN23/calibration-2023-bis/", type=str,
-                        help='Path to the SoccerNet-V3 dataset folder')
-    parser.add_argument('-p', '--prediction', default="/home/fmg/results/SN23-tests/", required=False, type=str,
+    parser.add_argument('-i', '--images', type=str, required=True,
+                        help='Path to the images to detect field on')
+    parser.add_argument('-p', '--prediction', required=True, type=str,
                         help="Path to the prediction folder")
-    parser.add_argument('--split', required=False, type=str, default="challenge", help='Select the split of data')
-    parser.add_argument('--masks', required=False, type=bool, default=False, help='Save masks in prediction directory')
+    parser.add_argument('--masks', required=False, type=bool,
+                        default=False, help='Save masks in prediction directory')
     parser.add_argument('--resolution_width', required=False, type=int, default=640,
                         help='width resolution of the images')
     parser.add_argument('--resolution_height', required=False, type=int, default=360,
@@ -272,43 +279,39 @@ if __name__ == "__main__":
         "../resources/mean.npy",
         "../resources/std.npy")
 
-    dataset_dir = os.path.join(args.soccernet, args.split)
-    if not os.path.exists(dataset_dir):
-        print("Invalid dataset path !")
+    images_dir = args.images
+    if not os.path.exists(images_dir):
+        print("Invalid images directory path !")
         exit(-1)
 
-    with open(os.path.join(dataset_dir, "per_match_info.json"), 'r') as f:
-        match_info = json.load(f)
+    output_prediction_folder = args.prediction
+    if not os.path.exists(output_prediction_folder):
+        print("Invalid prediction directory path !")
+        exit(-1)
 
-    with tqdm(enumerate(match_info.keys()), total=len(match_info.keys()), ncols=160) as t:
-        for i, match in t:
-            frame_list = match_info[match].keys()
+    frame_path_list = sorted(list(Path(images_dir).glob("*.jpg")))
 
-            for frame in frame_list:
+    with tqdm(enumerate(frame_path_list), total=len(frame_path_list), ncols=160) as t:
+        for i, frame_path in t:
+            prediction = dict()
+            count = 0
 
-                output_prediction_folder = os.path.join(args.prediction, args.split)
-                if not os.path.exists(output_prediction_folder):
-                    os.makedirs(output_prediction_folder)
-                prediction = dict()
-                count = 0
+            image = cv.imread(frame_path)
+            semlines = calib_net.analyse_image(image)
+            if args.masks:
+                mask = Image.fromarray(semlines.astype(np.uint8)).convert('P')
+                mask.putpalette(lines_palette)
+                mask_file = os.path.join(
+                    output_prediction_folder, frame_path.with_suffix(".png").name)
+                mask.save(mask_file)
+            skeletons = generate_class_synthesis(semlines, 6)
+            extremities = get_line_extremities(
+                skeletons, 40, args.resolution_width, args.resolution_height)
 
-                frame_path = os.path.join(dataset_dir, frame)
+            prediction = extremities
+            count += 1
 
-                frame_index = frame.split(".")[0]
-
-                image = cv.imread(frame_path)
-                semlines = calib_net.analyse_image(image)
-                if args.masks:
-                    mask = Image.fromarray(semlines.astype(np.uint8)).convert('P')
-                    mask.putpalette(lines_palette)
-                    mask_file = os.path.join(output_prediction_folder, frame)
-                    mask.save(mask_file)
-                skeletons = generate_class_synthesis(semlines, 6)
-                extremities = get_line_extremities(skeletons, 40, args.resolution_width, args.resolution_height)
-
-                prediction = extremities
-                count += 1
-
-                prediction_file = os.path.join(output_prediction_folder, f"extremities_{frame_index}.json")
-                with open(prediction_file, "w") as f:
-                    json.dump(prediction, f, indent=4)
+            prediction_file = os.path.join(
+                output_prediction_folder, frame_path.with_suffix(".json").name)
+            with open(prediction_file, "w") as f:
+                json.dump(prediction, f, indent=4)

@@ -126,21 +126,24 @@ def draw_pitch_homography(image, homography):
                     continue
                 projected /= projected[2]
                 if 0 < projected[0] < 960 and 0 < projected[1] < 540:
-                    cv.circle(image, (int(projected[0]), int(projected[1])), 1, (255, 0, 0), 1)
+                    cv.circle(image, (int(projected[0]), int(
+                        projected[1])), 1, (255, 0, 0), 1)
 
     return image
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Baseline for camera parameters extraction')
+    parser = argparse.ArgumentParser(
+        description='Baseline for camera parameters extraction')
 
     parser.add_argument('-s', '--soccernet', default="/home/fmg/data/SN23/calibration-2023-bis/", type=str,
                         help='Path to the SoccerNet-V3 dataset folder')
     parser.add_argument('-p', '--prediction', default="/home/fmg/results/SN23-tests/",
                         required=False, type=str,
                         help="Path to the prediction folder")
-    parser.add_argument('--split', required=False, type=str, default="valid", help='Select the split of data')
+    parser.add_argument('--split', required=False, type=str,
+                        default="valid", help='Select the split of data')
     parser.add_argument('--resolution_width', required=False, type=int, default=960,
                         help='width resolution of the images')
     parser.add_argument('--resolution_height', required=False, type=int, default=540,
@@ -163,7 +166,8 @@ if __name__ == "__main__":
 
             for frame in frame_list:
                 frame_index = frame.split(".")[0]
-                prediction_file = os.path.join(args.prediction, args.split, f"extremities_{frame_index}.json")
+                prediction_file = os.path.join(
+                    args.prediction, args.split, f"extremities_{frame_index}.json")
 
                 if not os.path.exists(prediction_file):
                     continue
@@ -185,8 +189,10 @@ if __name__ == "__main__":
                         continue
                     P3D1 = field.line_extremities_keys[k][0]
                     P3D2 = field.line_extremities_keys[k][1]
-                    p1 = np.array([v[0]['x'] * args.resolution_width, v[0]['y'] * args.resolution_height, 1.])
-                    p2 = np.array([v[1]['x'] * args.resolution_width, v[1]['y'] * args.resolution_height, 1.])
+                    p1 = np.array([v[0]['x'] * args.resolution_width,
+                                  v[0]['y'] * args.resolution_height, 1.])
+                    p2 = np.array([v[1]['x'] * args.resolution_width,
+                                  v[1]['y'] * args.resolution_height, 1.])
                     src_pts.extend([p1, p2])
                     if P3D1 in potential_3d_2d_matches.keys():
                         potential_3d_2d_matches[P3D1].extend([p1, p2])
@@ -209,14 +215,17 @@ if __name__ == "__main__":
                         line_matches.append((line_pitch, line))
 
                 if len(line_matches) >= 4:
-                    target_pts = [field.point_dict[k][:2] for k in potential_3d_2d_matches.keys()]
+                    target_pts = [field.point_dict[k][:2]
+                                  for k in potential_3d_2d_matches.keys()]
                     T1 = normalization_transform(target_pts)
                     T2 = normalization_transform(src_pts)
-                    success, homography = estimate_homography_from_line_correspondences(line_matches, T1, T2)
+                    success, homography = estimate_homography_from_line_correspondences(
+                        line_matches, T1, T2)
                     if success:
                         # cv_image = draw_pitch_homography(cv_image, homography)
 
-                        cam = Camera(args.resolution_width, args.resolution_height)
+                        cam = Camera(args.resolution_width,
+                                     args.resolution_height)
                         success = cam.from_homography(homography)
                         if success:
                             point_matches = []
@@ -226,14 +235,15 @@ if __name__ == "__main__":
                                 projected = cam.project_point(p3D)
 
                                 if 0 < projected[0] < args.resolution_width and 0 < projected[
-                                    1] < args.resolution_height:
+                                        1] < args.resolution_height:
                                     dist = np.zeros(len(potential_matches))
                                     for i, potential_match in enumerate(potential_matches):
                                         dist[i] = np.sqrt((projected[0] - potential_match[0]) ** 2 + (
-                                                projected[1] - potential_match[1]) ** 2)
+                                            projected[1] - potential_match[1]) ** 2)
                                     selected = np.argmin(dist)
                                     if dist[selected] < 100:
-                                        point_matches.append((p3D, potential_matches[selected][:2]))
+                                        point_matches.append(
+                                            (p3D, potential_matches[selected][:2]))
 
                             if len(point_matches) > 3:
                                 cam.refine_camera(point_matches)
@@ -245,7 +255,8 @@ if __name__ == "__main__":
                 if success:
                     camera_predictions = cam.to_json_parameters()
 
-                task2_prediction_file = os.path.join(args.prediction, args.split, f"camera_{frame_index}.json")
+                task2_prediction_file = os.path.join(
+                    args.prediction, args.split, f"camera_{frame_index}.json")
                 if camera_predictions:
                     with open(task2_prediction_file, "w") as f:
                         json.dump(camera_predictions, f, indent=4)
