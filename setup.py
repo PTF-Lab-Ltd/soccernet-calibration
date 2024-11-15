@@ -1,7 +1,6 @@
 # setup.py
-from setuptools import setup, find_packages
-import yaml
 import re
+from setuptools import setup, find_packages
 
 
 def convert_conda_to_pip_requirement(requirement):
@@ -29,7 +28,7 @@ def convert_conda_to_pip_requirement(requirement):
 
     # Package name mappings from conda to pip
     PACKAGE_MAPPING = {
-        'torch': 'pytorch',
+        'pytorch': 'torch',
         'opencv': 'opencv-python',
         'cv2': 'opencv-python'
     }
@@ -54,6 +53,8 @@ def convert_conda_to_pip_requirement(requirement):
 
 
 def get_requirements():
+    import yaml
+
     """Extract and convert requirements from environment.yml."""
     with open("environment.yml") as f:
         env = yaml.safe_load(f)
@@ -74,9 +75,9 @@ def get_requirements():
 
 setup(
     name="soccernet-calibration",
-    version="0.1.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    install_requires=get_requirements(),
     python_requires=">=3.9",
+    setup_requires=['pyyaml'],
+    install_requires=get_requirements()
 )

@@ -15,7 +15,7 @@ from PIL import Image
 from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 
-from src.soccerpitch import SoccerPitch
+from .soccerpitch import SoccerPitch
 
 
 def generate_class_synthesis(semantic_mask, radius):
@@ -274,10 +274,11 @@ if __name__ == "__main__":
     for line_class in SoccerPitch.lines_classes:
         lines_palette.extend(SoccerPitch.palette[line_class])
 
+    resources_dir = os.path.join(os.path.dirname(__file__), "../../resources")
     calib_net = SegmentationNetwork(
-        "../resources/soccer_pitch_segmentation.pth",
-        "../resources/mean.npy",
-        "../resources/std.npy")
+        os.path.join(resources_dir, "soccer_pitch_segmentation.pth"),
+        os.path.join(resources_dir, "mean.npy"),
+        os.path.join(resources_dir, "std.npy"))
 
     images_dir = args.images
     if not os.path.exists(images_dir):

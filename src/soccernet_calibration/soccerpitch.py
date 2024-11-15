@@ -1,10 +1,11 @@
 import numpy as np
 import json
+import os
 
 
 class SoccerPitch:
     """Static class variables that are specified by the rules of the game """
-    with open('soccerpitch.json', 'r') as f:
+    with open(os.path.join(os.path.dirname(__file__), 'soccerpitch.json'), 'r') as f:
         config = json.load(f)
 
     GOAL_LINE_TO_PENALTY_MARK = config['GOAL_LINE_TO_PENALTY_MARK']
