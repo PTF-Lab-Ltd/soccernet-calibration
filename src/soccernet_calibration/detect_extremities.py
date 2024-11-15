@@ -274,10 +274,12 @@ if __name__ == "__main__":
     for line_class in SoccerPitch.lines_classes:
         lines_palette.extend(SoccerPitch.palette[line_class])
 
+    resources_dir = Path(__file__).resolve(
+    ).parent.parent.parent.parent / ".." / ".." / "resources"
     calib_net = SegmentationNetwork(
-        "../resources/soccer_pitch_segmentation.pth",
-        "../resources/mean.npy",
-        "../resources/std.npy")
+        resources_dir / "soccer_pitch_segmentation.pth",
+        resources_dir / "mean.npy",
+        resources_dir / "std.npy")
 
     images_dir = args.images
     if not os.path.exists(images_dir):
