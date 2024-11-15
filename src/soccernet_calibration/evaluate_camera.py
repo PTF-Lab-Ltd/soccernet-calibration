@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from src.camera import Camera
-from src.evaluate_extremities import scale_points, distance, mirror_labels
-from src.soccerpitch import SoccerPitch
+from .camera import Camera
+from .evaluate_extremities import scale_points, distance, mirror_labels
+from .soccerpitch import SoccerPitch
 
 
 def get_polylines(camera_annotation, width, height, sampling_factor=0.2):
@@ -340,7 +340,7 @@ if __name__ == "__main__":
 
     final_score = completeness_score * mAccuracy
     print(f" On SoccerNet {args.split} set, final score of : {final_score}")
-    print(f" On SoccerNet {args.split} set, completeness rate of : {
+    print(f" On SoccerNet {args.split} set, completeness rate of: {
           completeness_score}")
 
     mRecall = np.mean(recalls)

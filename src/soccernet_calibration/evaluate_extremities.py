@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from src.soccerpitch import SoccerPitch
+from .soccerpitch import SoccerPitch
 
 
 class Line2D:

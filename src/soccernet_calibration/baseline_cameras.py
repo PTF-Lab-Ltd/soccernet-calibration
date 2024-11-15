@@ -6,8 +6,8 @@ import cv2 as cv
 import numpy as np
 from tqdm import tqdm
 
-from src.camera import Camera
-from src.soccerpitch import SoccerPitch
+from .camera import Camera
+from .soccerpitch import SoccerPitch
 
 
 def normalization_transform(points):
