@@ -7,12 +7,12 @@ dependencies:
   - python==3.9
   - pytorch==1.10.0
   - torchvision==0.11.1
-  - numpy>=1.21
-  - pillow>=9.0.0
-  - tqdm>=4.62.3
-  - opencv>=4.5.5
-  - matplotlib>=3.5.1
-  - pyyaml==6.0.2 
+  - numpy
+  - pillow
+  - tqdm
+  - opencv
+  - matplotlib
+  - pyyaml
   - pip==23.3.1
   - pip:
     - SoccerNet==0.1.23
