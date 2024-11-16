@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import os
 
 
 class SoccerPitch:
