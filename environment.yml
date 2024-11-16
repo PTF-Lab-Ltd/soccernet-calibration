@@ -13,6 +13,8 @@ dependencies:
   - opencv
   - matplotlib
   - pyyaml
+  - gdown
+  - zipfile
   - pip==23.3.1
   - pip:
     - SoccerNet==0.1.23
