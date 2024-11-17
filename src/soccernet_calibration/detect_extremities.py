@@ -268,6 +268,8 @@ if __name__ == "__main__":
                         help='width resolution of the images')
     parser.add_argument('--resolution_height', required=False, type=int, default=360,
                         help='height resolution of the images')
+    parser.add_argument('--prefix', required=False, type=str, default='jpg',
+                        help='Prefix for the input image files')
     args = parser.parse_args()
 
     lines_palette = [0, 0, 0]
@@ -275,7 +277,7 @@ if __name__ == "__main__":
         lines_palette.extend(SoccerPitch.palette[line_class])
 
     resources_dir = Path(__file__).resolve(
-    ).parent.parent.parent.parent / ".." / ".." / "resources"
+    ).parent.parent.parent / "resources"
     calib_net = SegmentationNetwork(
         resources_dir / "soccer_pitch_segmentation.pth",
         resources_dir / "mean.npy",
@@ -291,14 +293,14 @@ if __name__ == "__main__":
         print("Invalid prediction directory path !")
         exit(-1)
 
-    frame_path_list = sorted(list(Path(images_dir).glob("*.jpg")))
+    frame_path_list = sorted(list(Path(images_dir).glob(f"*.{args.prefix}")))
 
     with tqdm(enumerate(frame_path_list), total=len(frame_path_list), ncols=160) as t:
         for i, frame_path in t:
             prediction = dict()
             count = 0
 
-            image = cv.imread(frame_path)
+            image = cv.imread(str(frame_path))
             semlines = calib_net.analyse_image(image)
             if args.masks:
                 mask = Image.fromarray(semlines.astype(np.uint8)).convert('P')
