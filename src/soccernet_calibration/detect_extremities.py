@@ -293,7 +293,8 @@ if __name__ == "__main__":
         print("Invalid prediction directory path !")
         exit(-1)
 
-    frame_path_list = sorted(list(Path(images_dir).glob(f"*.{args.prefix}")))
+    frame_path_list = sorted(
+        list(Path(images_dir).glob(str("*.") + args.prefix)))
 
     with tqdm(enumerate(frame_path_list), total=len(frame_path_list), ncols=160) as t:
         for i, frame_path in t:
