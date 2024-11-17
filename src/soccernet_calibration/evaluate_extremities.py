@@ -290,10 +290,10 @@ if __name__ == "__main__":
             with open(prediction_file, 'r') as f:
                 predictions = json.load(f)
 
-            # predictions = scale_points(
-            #    predictions, args.resolution_width, args.resolution_height)
-            # line_annotations = scale_points(
-            #    line_annotations, args.resolution_width, args.resolution_height)
+            predictions = scale_points(
+                predictions, args.resolution_width, args.resolution_height)
+            line_annotations = scale_points(
+                line_annotations, args.resolution_width, args.resolution_height)
 
             img_prediction = predictions
             img_groundtruth = line_annotations
@@ -408,6 +408,9 @@ if __name__ == "__main__":
     #     plt.close(fig)
 
     # print(errors)
+    if not os.path.exists(os.path.join(args.prediction, "errors")):
+        os.makedirs(os.path.join(args.prediction, "errors"), exist_ok=True)
+
     for i, frame_index in enumerate(frame_indices):
         results["file_errors"][frame_index] = {
             "recall": str(accuracies[i]),
