@@ -390,10 +390,11 @@ if __name__ == "__main__":
         print(
             f"For class {line_class}, accuracy of {class_accuracy * 100:2.2f}%, precision of {class_precision * 100:2.2f}%  and recall of {class_recall * 100:2.2f}%")
         results[line_class] = {}
-        results[line_class]["recall"] = str(class_recall)
-        if line_class != "Line unknown":
-            results[line_class]["mean_reproj_error"] = np.mean(
-                dict_errors[line_class])
+        if line_class in dict_errors.keys():
+            results[line_class]["recall"] = str(class_recall)
+            if line_class != "Line unknown" and line_class != "Goal unknown":
+                results[line_class]["mean_reproj_error"] = np.mean(
+                    dict_errors[line_class])
 
     results["file_errors"] = {}
 
@@ -418,5 +419,5 @@ if __name__ == "__main__":
             "reprojection_errors": errors[i]
         }
 
-        with open(os.path.join(args.prediction, "errors", "evaluation_results.json"), 'w') as f:
-            json.dump(results, f, indent=4)
+    with open(os.path.join(args.prediction, "errors", "evaluation_results.json"), 'w') as f:
+        json.dump(results, f, indent=4)
