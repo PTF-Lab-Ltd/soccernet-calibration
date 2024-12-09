@@ -1,12 +1,13 @@
 import numpy as np
 import json
 import os
+import yaml
 
 
 class SoccerPitch:
     """Static class variables that are specified by the rules of the game """
     with open(os.path.join(os.path.dirname(__file__), '..', 'configs', 'soccerpitch.json'), 'r') as f:
-        config = json.load(f)
+        config = yaml.safe_load(f)
 
     GOAL_LINE_TO_PENALTY_MARK = config['GOAL_LINE_TO_PENALTY_MARK']
     PENALTY_AREA_WIDTH = config['PENALTY_AREA_WIDTH']

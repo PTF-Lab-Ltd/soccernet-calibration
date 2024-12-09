@@ -1,8 +1,9 @@
 name: soccernet-calibration
 channels:
-  - pytorch
+  - anaconda
   - conda-forge
   - defaults
+  - pytorch
 dependencies:
   - python==3.9
   - pytorch==1.10.0
@@ -14,7 +15,6 @@ dependencies:
   - matplotlib
   - pyyaml
   - gdown
-  - zipfile
-  - pip==23.3.1
+  - pip
   - pip:
     - SoccerNet==0.1.23
