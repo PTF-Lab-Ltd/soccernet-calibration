@@ -3,10 +3,12 @@ import json
 import os
 import yaml
 
+CONFIG_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'configs')
+
 
 class SoccerPitch:
     """Static class variables that are specified by the rules of the game """
-    with open(os.path.join(os.path.dirname(__file__), '..', 'configs', 'soccerpitch.json'), 'r') as f:
+    with open(os.path.join(CONFIG_DIR, 'soccerpitch.yml'), 'r') as f:
         config = yaml.safe_load(f)
 
     GOAL_LINE_TO_PENALTY_MARK = config['GOAL_LINE_TO_PENALTY_MARK']
@@ -21,6 +23,7 @@ class SoccerPitch:
     lines_classes = config['lines_classes']
     symetric_classes = config['symetric_classes']
     palette = config['palette']
+    field_areas = config['field_areas']
 
     def __init__(self, pitch_length=105., pitch_width=68.):
         """
